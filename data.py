@@ -1,7 +1,20 @@
+import gensim
+import mmap
 import os
 import torch
+from tqdm import tqdm
 
 from collections import Counter
+
+
+def get_num_lines(file_path):
+    """Helper function to get number of lines for progress bar."""
+    fp = open(file_path, "r+")
+    buf = mmap.mmap(fp.fileno(), 0)
+    lines = 0
+    while buf.readline():
+        lines += 1
+    return lines
 
 
 class Dictionary(object):
@@ -37,8 +50,8 @@ class Corpus(object):
         # Add words to the dictionary
         with open(path, 'r') as f:
             tokens = 0
-            for line in f:
-                words = line.split() + ['<eos>']
+            for line in tqdm(f, desc='Dictionarizing {}'.format(path), total=get_num_lines(path)):
+                words = gensim.utils.simple_preprocess(line) + ['<eos>']
                 tokens += len(words)
                 for word in words:
                     self.dictionary.add_word(word)
@@ -47,8 +60,8 @@ class Corpus(object):
         with open(path, 'r') as f:
             ids = torch.LongTensor(tokens)
             token = 0
-            for line in f:
-                words = line.split() + ['<eos>']
+            for line in tqdm(f, desc='Tokenizing {}'.format(path), total=get_num_lines(path)):
+                words = gensim.utils.simple_preprocess(line) + ['<eos>']
                 for word in words:
                     ids[token] = self.dictionary.word2idx[word]
                     token += 1
